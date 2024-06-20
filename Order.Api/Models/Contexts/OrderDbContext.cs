@@ -12,5 +12,7 @@ namespace Order.Api.Models.Contexts
         public DbSet<Entities.Order> Orders { get; set; }
 
         public DbSet<OrderItem> OrderItems { get; set; }
+
+        public DbSet<OrderOutbox> OrderOutboxes { get; set; }
     }
 }
