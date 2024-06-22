@@ -11,5 +11,7 @@ namespace Shared.Events
         public decimal TotalPrice { get; set; }
 
         public List<OrderItem> OrderItems { get; set; }
+
+        public Guid IdempotentToken { get; set; }
     }
 }
