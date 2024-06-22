@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Order.Api.Models.Contexts;
 using Order.Api.Models.Entities;
 using Order.Api.ViewModels;
-using Shared;
 using Shared.Events;
 using System.Text.Json;
 
@@ -32,6 +31,8 @@ app.UseSwaggerUI();
 
 app.MapPost("/create-order", async (CreateOrder model, OrderDbContext orderDbContext, ISendEndpointProvider sendEndpointProvider) =>
 {
+    Guid idempotentToken = Guid.NewGuid();
+
     Order.Api.Models.Entities.Order order = new()
     {
         BuyerId = model.BuyerId,
@@ -46,7 +47,6 @@ app.MapPost("/create-order", async (CreateOrder model, OrderDbContext orderDbCon
     };
 
     await orderDbContext.Orders.AddAsync(order);
-    await orderDbContext.SaveChangesAsync();
 
     OrderCreatedEvent orderCreatedEvent = new()
     {
@@ -59,6 +59,7 @@ app.MapPost("/create-order", async (CreateOrder model, OrderDbContext orderDbCon
             Count = oi.Count,
             ProductId = oi.ProductId
         }).ToList(),
+        IdempotentToken = idempotentToken,
     };
 
     OrderOutbox orderOutbox = new()
@@ -66,7 +67,8 @@ app.MapPost("/create-order", async (CreateOrder model, OrderDbContext orderDbCon
         OccuredOn = DateTime.UtcNow,
         ProcessedDate = null,
         Payload = JsonSerializer.Serialize(orderCreatedEvent),
-        Type = nameof(OrderCreatedEvent)
+        Type = nameof(OrderCreatedEvent),
+        IdempotentToken = idempotentToken
     };
 
     await orderDbContext.OrderOutboxes.AddAsync(orderOutbox);

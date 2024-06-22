@@ -1,8 +1,11 @@
-﻿namespace Order.Outbox.Table.Publisher.Entities
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Order.Outbox.Table.Publisher.Entities
 {
     public class OrderOutbox
     {
-        public int Id { get; set; }
+        [Key]
+        public Guid IdempotentToken { get; set; }
 
         public DateTime OccuredOn { get; set; }
 

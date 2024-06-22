@@ -1,4 +1,5 @@
 ﻿using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Shared.Events;
 using Stock.Service.Models.Contexts;
 using Stock.Service.Models.Entities;
@@ -10,19 +11,24 @@ namespace Stock.Service.Consumers
     {
         public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
         {
-            await stockDbContext.OrderInboxes.AddAsync(new()
+            if (!await stockDbContext.OrderInboxes.AnyAsync(x => x.IdempotentToken == context.Message.IdempotentToken))
             {
-                Processed = false,
-                Payload = JsonSerializer.Serialize(context.Message)
-            });
+                await stockDbContext.OrderInboxes.AddAsync(new()
+                {
+                    Processed = false,
+                    Payload = JsonSerializer.Serialize(context.Message),
+                    IdempotentToken = context.Message.IdempotentToken
+                });
 
-            await stockDbContext.SaveChangesAsync();
+                await stockDbContext.SaveChangesAsync();
+            }
+
 
             List<OrderInbox> orderInboxes = stockDbContext.OrderInboxes
                                                             .Where(x => !x.Processed)
                                                             .ToList();
 
-            foreach(var orderInbox in orderInboxes)
+            foreach (var orderInbox in orderInboxes)
             {
                 OrderCreatedEvent orderCreatedEvent = JsonSerializer.Deserialize<OrderCreatedEvent>(orderInbox.Payload);
 
